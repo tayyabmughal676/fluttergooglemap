@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fluttergooglemap/GoogeMapDirection/DirectionsRepository.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+// import 'package:location/location.dart';
 import 'direction_model/Directions.dart';
 
 void main() {
@@ -31,8 +33,34 @@ class GoogleMapScreen extends StatefulWidget {
 }
 
 class _GoogleMapScreenState extends State<GoogleMapScreen> {
+  late dynamic positionNow;
+  late dynamic positionLast;
+  LatLng? currentLatLng;
+
+  void getUserCurrentLocation() async {
+    await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
+        .then((currLocation) {
+      currentLatLng = new LatLng(currLocation.latitude, currLocation.longitude);
+      print(currentLatLng);
+      print(
+          'Current Position: ${currentLatLng!.latitude} :: ${currentLatLng!.longitude} ');
+    }).catchError((onError) {
+      print("onError: $onError");
+    });
+
+    positionLast = await Geolocator.getLastKnownPosition();
+
+    print(
+        "Last Position: ${positionLast.latitude} :: ${positionLast.longitude}");
+
+    setState(() {
+      // print(
+      //     "Position lat: ${positionNow.latitude}:: lng: ${positionNow.longitude}");
+    });
+  }
+
   static const _initialCameraPosition = CameraPosition(
-    target: LatLng(37.773972, -122.431297),
+    target: LatLng(37.773972, -122.431297), //LatLng(37.773972, -122.431297)
     zoom: 11.5,
     tilt: 50.0,
   );
@@ -41,6 +69,20 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
   Marker? _origin;
   Marker? _destination;
   Directions? _info;
+
+  @override
+  void initState() {
+    getUserCurrentLocation();
+
+    Geolocator.getCurrentPosition().then((currLocation) {
+      setState(() {
+        currentLatLng =
+            new LatLng(currLocation.latitude, currLocation.longitude);
+      });
+    });
+
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -135,9 +177,13 @@ class _GoogleMapScreenState extends State<GoogleMapScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.black,
-        onPressed: () => _googleMapController.animateCamera(_info != null
-            ? CameraUpdate.newLatLngBounds(_info!.bounds, 100.0)
-            : CameraUpdate.newCameraPosition(_initialCameraPosition)),
+        onPressed: () {
+          _googleMapController.animateCamera(_info != null
+              ? CameraUpdate.newLatLngBounds(_info!.bounds, 100.0)
+              : CameraUpdate.newCameraPosition(_initialCameraPosition));
+
+          getUserCurrentLocation();
+        },
         child: Icon(Icons.center_focus_strong),
       ),
     );
